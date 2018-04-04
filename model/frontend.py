@@ -17,7 +17,7 @@ class YOLO2(object):
     def __init__(self, labels,
                  backend_weights):
 
-        self.input_size = 416
+        self.input_size = 608
 
         self.nb_box = 5
         self.anchors = [0.57273, 0.677385,
@@ -271,7 +271,7 @@ class YOLO2(object):
 
         train_batch = BatchGenerator(train_imgs,
                                      generator_config,
-                                     jitter=False,
+                                     jitter=True,
                                      norm=self.feature_extractor.normalize)
         valid_batch = BatchGenerator(valid_imgs,
                                      generator_config,

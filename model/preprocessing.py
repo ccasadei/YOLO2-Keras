@@ -81,49 +81,60 @@ class BatchGenerator(Sequence):
         # preparo gli "augmenter" utili per limitare l'overfitting (impostato 50% delle volte)
         sometimes = lambda aug: iaa.Sometimes(0.5, aug)
 
-        # definiscio una sequenza di augmentation da applicare alle immagini
+        # definiscio una sequenza di augmentation (non posizionali!) da applicare alle immagini
         self.aug_pipe = iaa.Sequential(
             [
-                # iaa.Fliplr(0.5), # flip orizzontale il 50% delle volte
-                # iaa.Flipud(0.2), # flip verticale il 20% delle volte
-                # sometimes(iaa.Crop(percent=(0, 0.1))), # crop immagini di un 0-10% della loro altezza/larghezza
-                sometimes(iaa.Affine(
-                    # scale={"x": (0.8, 1.2), "y": (0.8, 1.2)}, # scala immagini di un 80-120% della loro grandezza
-                    # translate_percent={"x": (-0.2, 0.2), "y": (-0.2, 0.2)}, # traslazione di un -20..+20%
-                    # rotate=(-5, 5), # rotazione di -45..+45 gradi
-                    # shear=(-5, 5), # inclina di -16..+16 gradi
-                    # order=[0, 1], # usa interpolazione nearest neighbour o bilineare
-                    # cval=(0, 255), # usa un cval tra 0 e 255
-                    # mode=ia.ALL # una qualunque modalità di warping di scikit-image
-                )),
                 # esegue da 0 a 5 delle prossime augmentation
                 iaa.SomeOf((0, 5),
                            [
-                               # sometimes(iaa.Superpixels(p_replace=(0, 1.0), n_segments=(20, 200))), # converte l'immagine nella sua rappresentazione di superpixel (tessellatura)
-                               iaa.OneOf([
-                                   iaa.GaussianBlur((0, 3.0)),  # blur con sigma tra 0 e 3.0
-                                   iaa.AverageBlur(k=(2, 7)),  # blur con media locale con kernel tra 2 e 7
-                                   iaa.MedianBlur(k=(3, 11)),  # blur con mediana locale con kernel tra 2 e 7
-                               ]),
-                               iaa.Sharpen(alpha=(0, 1.0), lightness=(0.75, 1.5)),  # esegue un sharp dell'immagine
-                               # iaa.Emboss(alpha=(0, 1.0), strength=(0, 2.0)), # esegue un emboss dell'immagine
-                               # esegue la detenzione degli spigoli
+                               # converte l'immagine nella sua rappresentazione di superpixel (tessellatura)
+                               # sometimes(iaa.Superpixels(p_replace=(0, 1.0), n_segments=(20, 200))),
+
+                               # esegue vari tipi di blur
+                               # blur con sigma tra 0 e 3.0
+                               # blur con media locale con kernel tra 2 e 7
+                               # blur con mediana locale con kernel tra 2 e 7
+                               # iaa.OneOf([
+                               #     iaa.GaussianBlur((0, 3.0)),
+                               #     iaa.AverageBlur(k=(2, 7)),
+                               #     iaa.MedianBlur(k=(3, 11)),
+                               # ]),
+
+                               # esegue un sharp dell'immagine
+                               # iaa.Sharpen(alpha=(0, 1.0), lightness=(0.75, 1.5)),
+
+                               # esegue un emboss dell'immagine
+                               # iaa.Emboss(alpha=(0, 1.0), strength=(0, 2.0)),
+
+                               # esegue processi di ricerca dei bordi
                                # sometimes(iaa.OneOf([
                                #    iaa.EdgeDetect(alpha=(0, 0.7)),
                                #    iaa.DirectedEdgeDetect(alpha=(0, 0.7), direction=(0.0, 1.0)),
                                # ])),
-                               iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.05 * 255), per_channel=0.5),  # aggiunge rumore gaussiano
-                               iaa.OneOf([
-                                   iaa.Dropout((0.01, 0.1), per_channel=0.5),  # rimuove fino al 10% dei pixel in modo random
-                                   # iaa.CoarseDropout((0.03, 0.15), size_percent=(0.02, 0.05), per_channel=0.2),
-                               ]),
-                               # iaa.Invert(0.05, per_channel=True), # inverte i canali del colore
-                               iaa.Add((-10, 10), per_channel=0.5),  # cambia la luminostià da -10 a +10
-                               iaa.Multiply((0.5, 1.5), per_channel=0.5),  # cambia la luminosità di un 50-150%
-                               iaa.ContrastNormalization((0.5, 2.0), per_channel=0.5),  # migliora o peggiora il contrasto
-                               # iaa.Grayscale(alpha=(0.0, 1.0)),
-                               # sometimes(iaa.ElasticTransformation(alpha=(0.5, 3.5), sigma=0.25)), # muove localmente i pixel in modo random
-                               # sometimes(iaa.PiecewiseAffine(scale=(0.01, 0.05))) # muove parti di immagini in modo random
+
+                               # aggiunge rumore gaussiano
+                               # iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.05 * 255), per_channel=0.5),
+
+                               # rimuove fino al 10% dei pixel in modo random
+                               # iaa.OneOf([
+                               #     iaa.Dropout((0.01, 0.1), per_channel=0.5),
+                               #     # iaa.CoarseDropout((0.03, 0.15), size_percent=(0.02, 0.05), per_channel=0.2),
+                               # ]),
+
+                               # inverte i canali del colore
+                               # iaa.Invert(0.05, per_channel=True),
+
+                               # cambia la luminosità da -10 a +10
+                               # iaa.Add((-10, 10), per_channel=0.5),
+
+                               # cambia la luminosità di un 50-150%
+                               # iaa.Multiply((0.5, 1.5), per_channel=0.5),
+
+                               # migliora o peggiora il contrasto
+                               iaa.ContrastNormalization((0.5, 2.0), per_channel=0.5),
+
+                               # trasforma in scala di grigi
+                               # iaa.Grayscale(alpha=(0.0, 1.0))
                            ],
                            random_order=True
                            )
@@ -215,7 +226,7 @@ class BatchGenerator(Sequence):
             #                     0, 1.2e-3 * orig_img.shape[0],
             #                     (0, 255, 0), 2)
             # cv2.imshow("Debug", orig_img)
-            # cv2.waitKey(1)
+            # cv2.waitKey(1000)
 
             # assegna l'immagine di input a x_batch, eventualmente normalizzata
             if self.norm is not None:
@@ -252,7 +263,8 @@ class BatchGenerator(Sequence):
 
             # flippa l'immagine
             flip = np.random.binomial(1, .5)
-            if flip > 0.5: image = cv2.flip(image, 1)
+            if flip > 0.5:
+                image = cv2.flip(image, 1)
 
             image = self.aug_pipe.augment_image(image)
 
