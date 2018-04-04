@@ -16,10 +16,13 @@ train_imgs, train_labels = parse_annotation(configObj.annotations_path,
 
 # suddivido il dataset di due insiemi disgiunti di validation e training
 split_val = float(configObj.train_val_split)
-train_valid_split = int(split_val * len(train_imgs))
-np.random.shuffle(train_imgs)
-valid_imgs = train_imgs[train_valid_split:]
-train_imgs = train_imgs[:train_valid_split]
+if split_val>0.:
+    train_valid_split = int(split_val * len(train_imgs))
+    np.random.shuffle(train_imgs)
+    valid_imgs = train_imgs[train_valid_split:]
+    train_imgs = train_imgs[:train_valid_split]
+else:
+    valid_imgs = []
 
 # costruisco il modello
 yolo = YOLO2(labels=configObj.classes,

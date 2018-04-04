@@ -291,7 +291,7 @@ class YOLO2(object):
                                      save_weights_only=True,
                                      mode='min',
                                      period=1)
-        tensorboard = TensorBoard(log_dir=os.path.expanduser(log_path) + 'yolo',
+        tensorboard = TensorBoard(log_dir=os.path.expanduser(log_path),
                                   histogram_freq=0,
                                   write_graph=True,
                                   write_images=False)
