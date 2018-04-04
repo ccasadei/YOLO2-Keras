@@ -1,4 +1,5 @@
-I pesi di **BASE** sono scaricabili da qui: https://1drv.ms/f/s!ApLdDEW3ut5fec2OzK4S4RpT-SU
+I pesi di **BASE** sono scaricabili da qui: 
+https://1drv.ms/f/s!ApLdDEW3ut5fec2OzK4S4RpT-SU
 
 Selezionare il file `full_yolo_backend.h5` e rinominarlo in `base_backend.h5`.
 

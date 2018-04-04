@@ -1,6 +1,7 @@
 # YOLO2-Keras
 
-Refactory del progetto `https://github.com/experiencor/basic-yolo-keras`
+Refactory del progetto 
+https://github.com/experiencor/basic-yolo-keras
 
 Il file `configYOLO.json` contiene la configurazione della rete, delle classi, del training, i dataset, eccetera.
 
