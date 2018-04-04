@@ -244,7 +244,11 @@ class BatchGenerator(Sequence):
     def aug_image(self, train_instance, jitter):
         image_name = train_instance['filename']
         image = cv2.imread(image_name)
-        h, w, c = image.shape
+        try:
+            h, w, c = image.shape
+        except:
+            print("Errore file: ", image_name)
+            exit(1)
 
         all_objs = copy.deepcopy(train_instance['object'])
 
