@@ -139,7 +139,7 @@ class Yolo2Feature(object):
 
         self.feature_extractor = Model(input_image, x)
 
-        if os.path.isfile(backend_weights):
+        if (backend_weights is not None) and (os.path.isfile(backend_weights)):
             self.feature_extractor.load_weights(backend_weights)
             print("Caricati pesi base backend")
 

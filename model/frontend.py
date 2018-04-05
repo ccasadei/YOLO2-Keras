@@ -239,7 +239,6 @@ class YOLO2(object):
               debug=False):
 
         self.batch_size = batch_size
-        self.warmup_bs = warmup_epochs * (train_times * (len(train_imgs) / batch_size + 1) + valid_times * (len(valid_imgs) / batch_size + 1))
 
         self.object_scale = object_scale
         self.no_object_scale = no_object_scale
@@ -247,9 +246,6 @@ class YOLO2(object):
         self.class_scale = class_scale
 
         self.debug = debug
-
-        if warmup_epochs > 0:
-            nb_epoch = warmup_epochs
 
         # compilo il modello
         optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
@@ -296,7 +292,21 @@ class YOLO2(object):
                                   write_graph=True,
                                   write_images=False)
 
-        # eseguo il processo di training
+        if warmup_epochs > 0:
+            print("WARMUP...")
+            self.warmup_bs = warmup_epochs * (train_times * (len(train_imgs) / batch_size + 1) + valid_times * (len(valid_imgs) / batch_size + 1))
+            # eseguo il processo di training di warmpup
+            self.model.fit_generator(generator=train_batch,
+                                     steps_per_epoch=len(train_batch) * train_times,
+                                     epochs=warmup_epochs,
+                                     verbose=1,
+                                     validation_data=valid_batch,
+                                     validation_steps=len(valid_batch) * valid_times,
+                                     callbacks=[early_stop, checkpoint, tensorboard])
+
+        print("Training...")
+        self.warmup_bs = 0
+        # eseguo il processo di training normale
         self.model.fit_generator(generator=train_batch,
                                  steps_per_epoch=len(train_batch) * train_times,
                                  epochs=nb_epoch,
