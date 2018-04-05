@@ -1,15 +1,11 @@
 import matplotlib as mpl
+from keras import backend as K
 from keras.engine.topology import Container
-from keras.layers import Conv2D, LeakyReLU
-from keras import backend as K, Model
+from keras.layers import Conv2D
 
 mpl.use('Agg')
 
 from model.frontend import YOLO2
-
-import numpy as np
-
-from matplotlib import pyplot as plt
 
 from config import Config
 import os
@@ -22,25 +18,6 @@ def crea_dizionario_layer_ricorsivo(layer, dict):
             crea_dizionario_layer_ricorsivo(l, dict)
     else:
         dict[layer.name] = layer
-
-
-def deprocess_image(x):
-    # normalize tensor: center on 0., ensure std is 0.1
-    x -= x.mean()
-    x /= (x.std() + K.epsilon())
-    x *= 0.1
-
-    # clip to [0, 1]
-    x += 0.5
-    x = np.clip(x, 0, 1)
-
-    # convert to RGB array
-    x *= 255
-    if K.image_data_format() == 'channels_first':
-        x = x.transpose((1, 2, 0))
-
-    x = np.clip(x, 0, 255).astype('uint8')
-    return x
 
 
 # leggo la configurazione
@@ -157,7 +134,7 @@ crea_dizionario_layer_ricorsivo(model.feature_extractor.feature_extractor, layer
 for imgf in os.listdir(config.test_images_path):
     imgfp = os.path.join(config.test_images_path, imgf)
     if os.path.isfile(imgfp):
-        orig_image = cv2.resize(cv2.imread(imgfp), (model.input_size,model.input_size))
+        orig_image = cv2.resize(cv2.imread(imgfp), (model.input_size, model.input_size))
         cv2.imshow('Immagine', orig_image)
 
         # mi scorro tutti i layer e lavoro su quelli convoluzionali
@@ -193,4 +170,3 @@ for imgf in os.listdir(config.test_images_path):
                         filter_idx += 1
                     if k == ord('-'):
                         filter_idx = max(0, filter_idx - 1)
-
