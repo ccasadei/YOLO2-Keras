@@ -13,6 +13,7 @@ class Config:
         self.patience = config['train']['patience']
         self.do_freeze_layers = config['train']['do_freeze_layers']
         self.train_val_split = config['train']['train_val_split']
+        self.augmentation = config['train']['augmentation']
 
         self.pretrained_weights_path = config['path']['pretrained_weights']
         self.base_weights_path = config['path']['base_weights']
@@ -25,5 +26,6 @@ class Config:
         self.test_result_path = config['path']['test_result']
         self.log_path = config['path']['log']
 
+        self.input_size = config['model']['input_size']
         self.classes = config['model']['classes']
 

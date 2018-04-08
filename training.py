@@ -59,4 +59,5 @@ yolo.train(train_imgs=train_imgs,
            log_path=configObj.log_path,
            checkpoint_weights_name=configObj.chkpnt_weights_path,
            result_weights_name=configObj.trained_weights_path,
-           patience=configObj.patience)
+           patience=configObj.patience,
+           augmentation=configObj.augmentation)

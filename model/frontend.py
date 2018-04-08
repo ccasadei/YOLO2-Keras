@@ -14,10 +14,10 @@ from model.utils import decode_netout
 
 
 class YOLO2(object):
-    def __init__(self, labels,
+    def __init__(self, labels, input_size,
                  backend_weights):
 
-        self.input_size = 608
+        self.input_size = input_size
 
         self.nb_box = 5
         self.anchors = [0.57273, 0.677385,
@@ -27,6 +27,7 @@ class YOLO2(object):
                         9.77052, 9.16828]
 
         self.max_box_per_image = 15
+        self.warmup_bs = 0
 
         # preparo il layer di estrazione feature
         self.true_boxes = Input(shape=(1, 1, 1, self.max_box_per_image, 4))
@@ -226,6 +227,7 @@ class YOLO2(object):
               checkpoint_weights_name,
               result_weights_name,
               patience,
+              augmentation,
               train_times=2,  # numero di ripetizioni del training set (per piccoli dataset)
               valid_times=2,  # numero di ripetizioni del validation set (per piccoli dataset)
               nb_epoch=100,  # numero di epoche
@@ -267,12 +269,14 @@ class YOLO2(object):
 
         train_batch = BatchGenerator(train_imgs,
                                      generator_config,
-                                     jitter=True,
+                                     jitter=augmentation,
+                                     augmentation=augmentation,
                                      norm=self.feature_extractor.normalize)
         valid_batch = BatchGenerator(valid_imgs,
                                      generator_config,
                                      norm=self.feature_extractor.normalize,
-                                     jitter=False)
+                                     jitter=False,
+                                     augmentation=False)
 
         # preparo i vari callback di allenamento
         early_stop = EarlyStopping(monitor='val_loss',

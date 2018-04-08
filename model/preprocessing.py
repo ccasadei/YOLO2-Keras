@@ -66,6 +66,7 @@ class BatchGenerator(Sequence):
                  config,
                  shuffle=True,
                  jitter=True,
+                 augmentation=True,
                  norm=None):
         self.generator = None
 
@@ -74,6 +75,7 @@ class BatchGenerator(Sequence):
 
         self.shuffle = shuffle
         self.jitter = jitter
+        self.augmentation = augmentation
         self.norm = norm
 
         self.anchors = [BoundBox(0, 0, config['ANCHORS'][2 * i], config['ANCHORS'][2 * i + 1]) for i in range(int(len(config['ANCHORS']) // 2))]
@@ -270,7 +272,8 @@ class BatchGenerator(Sequence):
             if flip > 0.5:
                 image = cv2.flip(image, 1)
 
-            image = self.aug_pipe.augment_image(image)
+            if self.augmentation:
+                image = self.aug_pipe.augment_image(image)
 
         # ridimensiona l'immagine
         image = cv2.resize(image, (self.config['IMAGE_H'], self.config['IMAGE_W']))

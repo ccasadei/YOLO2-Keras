@@ -119,6 +119,7 @@ elif os.path.isfile(config.pretrained_weights_path):
 
 # creo il modello
 model = YOLO2(backend_weights=config.backend_weights,
+              input_size=config.input_size,
               labels=classes)
 
 # carico i pesi
