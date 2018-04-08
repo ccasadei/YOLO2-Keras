@@ -1,11 +1,11 @@
 {
   "train": {
     "batch_size": 8,
-    "epochs": 5000,
+    "epochs": 200,
     "base_lr": 1e-5,
-    "patience": 200,
+    "patience": 100,
     "do_freeze_layers": false,
-    "train_val_split": 0.80,
+    "train_val_split": 0.8,
     "augmentation": false
   },
   "path": {
@@ -21,8 +21,8 @@
     "log": "./logs/"
   },
   "model": {
-    "input_size": 416,
-    "input_size1": 608,
+    "input_size1": 416,
+    "input_size": 608,
     "classes": [
       "person_calling"
     ]

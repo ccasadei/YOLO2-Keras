@@ -3,7 +3,7 @@ import os
 import cv2
 import numpy as np
 import tensorflow as tf
-from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
+from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard, ReduceLROnPlateau
 from keras.layers import Reshape, Conv2D, Input, Lambda
 from keras.models import Model
 from keras.optimizers import Adam
@@ -295,6 +295,9 @@ class YOLO2(object):
                                   histogram_freq=0,
                                   write_graph=True,
                                   write_images=False)
+        reduce_lr_on_plateau = ReduceLROnPlateau(monitor='val_loss', factor=0.1,
+                                                 patience=min(2, patience / 10),
+                                                 verbose=1, mode='auto', epsilon=0.0001, cooldown=0, min_lr=0),
 
         if warmup_epochs > 0:
             print("WARMUP...")
