@@ -25,7 +25,7 @@ else:
     valid_imgs = []
 
 # costruisco il modello
-yolo = YOLO2(labels=configObj.classes,
+yolo = YOLO2(labels=configObj.classes, input_size=configObj.input_size,
              backend_weights=configObj.backend_weights)
 
 # carico i pesi pretrained, se ci sono
