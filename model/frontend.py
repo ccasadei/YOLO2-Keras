@@ -9,6 +9,7 @@ from keras.models import Model
 from keras.optimizers import Adam
 
 from model.backend import Yolo2Feature
+from model.callbacks import get_callbacks
 from model.preprocessing import BatchGenerator
 from model.utils import decode_netout
 
@@ -223,10 +224,8 @@ class YOLO2(object):
 
     def train(self, train_imgs,  # lista delle immagini di training
               valid_imgs,  # lista delle immagini di validazione
-              log_path,
-              checkpoint_weights_name,
+              config,
               result_weights_name,
-              patience,
               augmentation,
               train_times=2,  # numero di ripetizioni del training set (per piccoli dataset)
               valid_times=2,  # numero di ripetizioni del validation set (per piccoli dataset)
@@ -251,7 +250,7 @@ class YOLO2(object):
 
         # compilo il modello
         optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
-        self.model.compile(loss=self.custom_loss, optimizer=optimizer)
+        self.model.compile(loss=self.custom_loss, optimizer=optimizer, metrics=['accuracy'])
 
         # preparo i generatori di training e di validazione
         generator_config = {
@@ -279,25 +278,7 @@ class YOLO2(object):
                                      augmentation=False)
 
         # preparo i vari callback di allenamento
-        early_stop = EarlyStopping(monitor='val_loss',
-                                   min_delta=1e-4,
-                                   patience=patience,
-                                   mode='min',
-                                   verbose=1)
-        checkpoint = ModelCheckpoint(checkpoint_weights_name,
-                                     monitor='val_loss',
-                                     verbose=1,
-                                     save_best_only=True,
-                                     save_weights_only=True,
-                                     mode='min',
-                                     period=1)
-        tensorboard = TensorBoard(log_dir=os.path.expanduser(log_path),
-                                  histogram_freq=0,
-                                  write_graph=True,
-                                  write_images=False)
-        reduce_lr_on_plateau = ReduceLROnPlateau(monitor='val_loss', factor=0.1,
-                                                 patience=min(2, patience / 10),
-                                                 verbose=1, mode='auto', epsilon=0.0001, cooldown=0, min_lr=0),
+        callbacks = get_callbacks(config)
 
         if warmup_epochs > 0:
             print("WARMUP...")
@@ -309,7 +290,7 @@ class YOLO2(object):
                                      verbose=1,
                                      validation_data=valid_batch,
                                      validation_steps=len(valid_batch) * valid_times,
-                                     callbacks=[early_stop, checkpoint, tensorboard])
+                                     callbacks=[])
 
         print("Training...")
         self.warmup_bs = 0
@@ -320,7 +301,7 @@ class YOLO2(object):
                                  verbose=1,
                                  validation_data=valid_batch,
                                  validation_steps=len(valid_batch) * valid_times,
-                                 callbacks=[early_stop, checkpoint, tensorboard])
+                                 callbacks=callbacks)
 
         # salvo i pesi risultanti
         self.model.save_weights(result_weights_name)

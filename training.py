@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+import time
 
 from config import Config
 from model.frontend import YOLO2
@@ -18,9 +19,13 @@ train_imgs, train_labels = parse_annotation(configObj.annotations_path,
 split_val = float(configObj.train_val_split)
 if split_val>0.:
     train_valid_split = int(split_val * len(train_imgs))
+    # mescola l'ordine delle righe (casuale, ma ripetibile)
+    np.random.seed(19081974)
     np.random.shuffle(train_imgs)
     valid_imgs = train_imgs[train_valid_split:]
     train_imgs = train_imgs[:train_valid_split]
+    # resetto il seed random con un numero dipendente dall'istante attuale in millisecondi
+    np.random.seed(int(round(time.time() * 1000)))
 else:
     valid_imgs = []
 
@@ -53,11 +58,9 @@ yolo.model.summary()
 
 yolo.train(train_imgs=train_imgs,
            valid_imgs=valid_imgs,
+           config=configObj,
            nb_epoch=configObj.epochs,
            learning_rate=configObj.base_lr,
            batch_size=configObj.batch_size,
-           log_path=configObj.log_path,
-           checkpoint_weights_name=configObj.chkpnt_weights_path,
            result_weights_name=configObj.trained_weights_path,
-           patience=configObj.patience,
            augmentation=configObj.augmentation)

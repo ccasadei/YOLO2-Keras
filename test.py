@@ -111,6 +111,7 @@ elif os.path.isfile(config.pretrained_weights_path):
 
 # creo il modello
 model = YOLO2(backend_weights=config.backend_weights,
+              input_size=config.input_size,
               labels=classes)
 
 # carico i pesi
@@ -125,6 +126,9 @@ for imgf in os.listdir(config.test_images_path):
         orig_image = cv2.imread(imgfp)
 
         boxes = model.predict(orig_image)
+
+        # converte l'immagine correttamente in RGB
+        orig_image = orig_image[..., ::-1]
 
         # prepara i colori
         colors = plt.cm.hsv(np.linspace(0, 1, len(classes))).tolist()
