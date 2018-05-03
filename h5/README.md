@@ -1,6 +1,8 @@
 I pesi di **BASE** sono scaricabili da qui: 
 https://1drv.ms/f/s!ApLdDEW3ut5fec2OzK4S4RpT-SU
 
+**NOTA**: i file base potrebbero non essere correttamente impostati. Si consiglia di caricarli la prima volta disabilitando l'opzione `by_name` e poi salvarli con il metodo `save_weights` in modo vengano salvati con i nomi corretti dei layers.
+
 Selezionare il file `full_yolo_backend.h5` e rinominarlo in `base_backend.h5`.
 
 Il file `base.h5` se esiste è quello che contiene i pesi di backend e frontend allenati su COCO.

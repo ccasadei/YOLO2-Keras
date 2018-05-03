@@ -114,9 +114,19 @@ model = YOLO2(backend_weights=config.backend_weights,
               input_size=config.input_size,
               labels=classes)
 
+# NOTA: eseguo lo stesso procedimento di freeze perchè questo va a modificare l'ordine dei layer e non potrei più caricare i pesi!
+# infatti weights = trained_weights + untrained_weights!
+if config.do_freeze_layers:
+    # se non c'è il nome del layer su cui fermare il freezing, freezzo tutto il backend
+    for l in model.feature_extractor.feature_extractor.layers:
+        if l.name == config.freeze_layer_stop_name:
+            break
+        l.trainable = False
+
 # carico i pesi
-model.load_weights(wpath, by_name=True, skip_mismatch=True)
-print("Caricati pesi " + wname)
+if os.path.isfile(wpath):
+    model.load_weights(wpath, by_name=True, skip_mismatch=True)
+    print("Caricati pesi " + wname)
 
 # carico le immagini originali e quelle ridimensionate in due array
 # ne prendo una alla volta per minimizzare la memoria GPU necessaria
@@ -141,10 +151,10 @@ for imgf in os.listdir(config.test_images_path):
         if len(boxes) > 0:
             for box in boxes:
                 # trasformo le coordinate normalizzate in coordinate assolute
-                xmin = int((box.x - box.w / 2) * orig_image.shape[1])
-                xmax = int((box.x + box.w / 2) * orig_image.shape[1])
-                ymin = int((box.y - box.h / 2) * orig_image.shape[0])
-                ymax = int((box.y + box.h / 2) * orig_image.shape[0])
+                xmin = int(box.xmin * orig_image.shape[1])
+                xmax = int(box.xmax * orig_image.shape[1])
+                ymin = int(box.ymin * orig_image.shape[0])
+                ymax = int(box.ymax * orig_image.shape[0])
                 color = colors[int(box.label) % len(colors)]
                 label = '{}: {:.2f}'.format(classes[int(box.label)], box.score)
                 current_axis.add_patch(plt.Rectangle((xmin, ymin), xmax - xmin, ymax - ymin, color=color, fill=False, linewidth=2))

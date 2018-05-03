@@ -11,7 +11,9 @@ class Config:
         self.epochs = config['train']['epochs']
         self.base_lr = config['train']['base_lr']
         self.patience = config['train']['patience']
+        self.warmup_epochs = config['train']['warmup_epochs']
         self.do_freeze_layers = config['train']['do_freeze_layers']
+        self.freeze_layer_stop_name = config['train']['freeze_layer_stop_name']
         self.train_val_split = config['train']['train_val_split']
         self.augmentation = config['train']['augmentation']
 

@@ -1,28 +1,29 @@
 {
   "train": {
-    "batch_size": 1,
-    "epochs": 200,
-    "base_lr": 1e-3,
-    "patience": 100,
-    "do_freeze_layers": false,
-    "train_val_split": 0.8,
+    "batch_size": 4,
+    "epochs": 10000,
+    "base_lr": 1e-7,
+    "patience": 0,
+    "warmup_epochs": 1,
+    "do_freeze_layers": true,
+    "freeze_layer_stop_name": "no_conv_21",
+    "train_val_split": 0.9,
     "augmentation": false
   },
   "path": {
     "pretrained_weights": "./h5/pretrained.h5",
     "base_weights": "./h5/base.h5",
     "trained_weights": "./h5/result.h5",
-    "chkpnt_weights": "./h5/chkpnt_best.h5",
+    "chkpnt_weights": "./h5/chkpnt_best_{val_loss:.4f}.h5",
     "backend_weights": "./h5/base_backend.h5",
-    "images": "../../dataset/mini/images/",
-    "annotations": "../../dataset/mini/annotations/",
+    "images": "../../dataset/person_calling/images/",
+    "annotations": "../../dataset/person_calling/annotations/",
     "test_images": "../../dataset/test/",
     "test_result": "../../dataset/test/result/",
     "log": "./logs/"
   },
   "model": {
     "input_size": 416,
-    "input_size1": 608,
     "classes": [
       "person_calling"
     ]

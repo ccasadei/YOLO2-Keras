@@ -1,4 +1,4 @@
-from keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau, TensorBoard
+from keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau, TensorBoard, Callback
 
 
 def get_callbacks(config):
@@ -10,7 +10,7 @@ def get_callbacks(config):
                         save_weights_only=True,
                         mode='min',
                         period=1),
-        ReduceLROnPlateau(monitor='val_loss', factor=0.1,
+        ReduceLROnPlateau(monitor='val_loss', factor=0.5,
                           patience=max(5, config.patience / 10),
                           verbose=1, mode='min', epsilon=0.0001, cooldown=0, min_lr=0),
         TensorBoard(log_dir=config.log_path, histogram_freq=0,

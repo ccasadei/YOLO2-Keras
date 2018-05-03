@@ -20,30 +20,22 @@ class YOLO2(object):
 
         self.input_size = input_size
 
-        self.nb_box = 5
-        self.anchors = [0.57273, 0.677385,
-                        1.87446, 2.06253,
-                        3.33843, 5.47434,
-                        7.88282, 3.52778,
-                        9.77052, 9.16828]
-
-        self.max_box_per_image = 15
-        self.warmup_bs = 0
-
-        # preparo il layer di estrazione feature
-        self.true_boxes = Input(shape=(1, 1, 1, self.max_box_per_image, 4))
-        self.feature_extractor = Yolo2Feature(self.input_size, backend_weights)
-
-        print("Output shape dell'estrattore di feature: ", self.feature_extractor.get_output_shape())
-        self.grid_h, self.grid_w = self.feature_extractor.get_output_shape()
-        self.reshape_model(labels)
-
-    def reshape_model(self, labels):
         self.labels = list(labels)
         self.nb_class = len(self.labels)
+        self.anchors = [0.57273, 0.677385, 1.87446, 2.06253, 3.33843, 5.47434, 7.88282, 3.52778, 9.77052, 9.16828]
+        self.nb_box = len(self.anchors) // 2
         self.class_wt = np.ones(self.nb_class, dtype='float32')
+        self.max_box_per_image = 10
 
+        self.warmup_batches = 0
+
+        # preparo il layer di estrazione feature
         input_image = Input(shape=(self.input_size, self.input_size, 3))
+        self.true_boxes = Input(shape=(1, 1, 1, self.max_box_per_image, 4))
+        self.feature_extractor = Yolo2Feature(self.input_size, backend_weights)
+        print("Output shape dell'estrattore di feature: ", self.feature_extractor.get_output_shape())
+
+        self.grid_h, self.grid_w = self.feature_extractor.get_output_shape()
         features = self.feature_extractor.extract(input_image)
 
         # creo il layer di object detection
@@ -54,6 +46,7 @@ class YOLO2(object):
                         kernel_initializer='lecun_normal')(features)
         output = Reshape((self.grid_h, self.grid_w, self.nb_box, 4 + 1 + self.nb_class))(output)
         output = Lambda(lambda args: args[0])([output, self.true_boxes])
+
         self.model = Model([input_image, self.true_boxes], output)
 
         # inizializzo i pesi del layer di detection
@@ -71,7 +64,7 @@ class YOLO2(object):
         cell_x = tf.to_float(tf.reshape(tf.tile(tf.range(self.grid_w), [self.grid_h]), (1, self.grid_h, self.grid_w, 1, 1)))
         cell_y = tf.transpose(cell_x, (0, 2, 1, 3, 4))
 
-        cell_grid = tf.tile(tf.concat([cell_x, cell_y], -1), [self.batch_size, 1, 1, 5, 1])
+        cell_grid = tf.tile(tf.concat([cell_x, cell_y], -1), [self.batch_size, 1, 1, self.nb_box, 1])
 
         coord_mask = tf.zeros(mask_shape)
         conf_mask = tf.zeros(mask_shape)
@@ -80,25 +73,27 @@ class YOLO2(object):
         seen = tf.Variable(0.)
         total_recall = tf.Variable(0.)
 
-        # correggo predizione x ed y
+        # PREDIZIONE
+        # corregge x, y
         pred_box_xy = tf.sigmoid(y_pred[..., :2]) + cell_grid
 
-        # correggo predizione w ed h
+        # corregge w, h
         pred_box_wh = tf.exp(y_pred[..., 2:4]) * np.reshape(self.anchors, [1, 1, 1, self.nb_box, 2])
 
-        # correggo confidenza
+        # corregge confidenza
         pred_box_conf = tf.sigmoid(y_pred[..., 4])
 
-        # correggo probabilità classificazione
+        # corregge classificazione
         pred_box_class = y_pred[..., 5:]
 
-        # correggo ground truth x ed y
-        true_box_xy = y_true[..., 0:2]
+        # GROUND TRUTH
+        # corregge x, y
+        true_box_xy = y_true[..., 0:2]  # relative position to the containing cell
 
-        # correggo ground truth w ed h
-        true_box_wh = y_true[..., 2:4]
+        # corregge w, h
+        true_box_wh = y_true[..., 2:4]  # number of cells accross, horizontally and vertically
 
-        # correggo confidenza
+        # corregge confidenza
         true_wh_half = true_box_wh / 2.
         true_mins = true_box_xy - true_wh_half
         true_maxes = true_box_xy + true_wh_half
@@ -120,13 +115,14 @@ class YOLO2(object):
 
         true_box_conf = iou_scores * y_true[..., 4]
 
-        # correggo probabilità classificazione
+        # corregge classificazione
         true_box_class = tf.argmax(y_true[..., 5:], -1)
 
-        # maschera delle coordinate: è semplicemente la posizione delle box di ground truth (predittori)
+        # MASCHERE
+        # maschera delle coordinate: semplicemente è la posizione del ground truth box (predittori)
         coord_mask = tf.expand_dims(y_true[..., 4], axis=-1) * self.coord_scale
 
-        # maschera della confidenza: penalizza i predittori e i box con un basso IOU
+        # maschera della confidenza: penalizza i predittori + penalizza box con basso IOU
         true_xy = self.true_boxes[..., 0:2]
         true_wh = self.true_boxes[..., 2:4]
 
@@ -155,26 +151,27 @@ class YOLO2(object):
         best_ious = tf.reduce_max(iou_scores, axis=4)
         conf_mask = conf_mask + tf.to_float(best_ious < 0.6) * (1 - y_true[..., 4]) * self.no_object_scale
 
+        # penalizza la confidenza dei box
         conf_mask = conf_mask + y_true[..., 4] * self.object_scale
 
-        # maschera di classificazione: semplicemente la posizione delle box di ground truth (predittori)
+        # maschera della classificazione: semplicemente la posizione del ground truth box (predittori)
         class_mask = y_true[..., 4] * tf.gather(self.class_wt, true_box_class) * self.class_scale
 
-        # training di warm-up
+        # WARMUP
         no_boxes_mask = tf.to_float(coord_mask < self.coord_scale / 2.)
         seen = tf.assign_add(seen, 1.)
 
-        true_box_xy, true_box_wh, coord_mask = tf.cond(tf.less(seen, self.warmup_bs),
+        true_box_xy, true_box_wh, coord_mask = tf.cond(tf.less(seen, self.warmup_batches + 1),
                                                        lambda: [true_box_xy + (0.5 + cell_grid) * no_boxes_mask,
-                                                                true_box_wh + tf.ones_like(true_box_wh) *
-                                                                np.reshape(self.anchors, [1, 1, 1, self.nb_box, 2]) *
+                                                                true_box_wh + tf.ones_like(true_box_wh) * \
+                                                                np.reshape(self.anchors, [1, 1, 1, self.nb_box, 2]) * \
                                                                 no_boxes_mask,
                                                                 tf.ones_like(coord_mask)],
                                                        lambda: [true_box_xy,
                                                                 true_box_wh,
                                                                 coord_mask])
 
-        # finalizzo la funzione loss
+        # Finalizzo la funzione loss
         nb_coord_box = tf.reduce_sum(tf.to_float(coord_mask > 0.0))
         nb_conf_box = tf.reduce_sum(tf.to_float(conf_mask > 0.0))
         nb_class_box = tf.reduce_sum(tf.to_float(class_mask > 0.0))
@@ -185,7 +182,9 @@ class YOLO2(object):
         loss_class = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=true_box_class, logits=pred_box_class)
         loss_class = tf.reduce_sum(loss_class * class_mask) / (nb_class_box + 1e-6)
 
-        loss = loss_xy + loss_wh + loss_conf + loss_class
+        loss = tf.cond(tf.less(seen, self.warmup_batches + 1),
+                       lambda: loss_xy + loss_wh + loss_conf + loss_class + 10,
+                       lambda: loss_xy + loss_wh + loss_conf + loss_class)
 
         if self.debug:
             nb_true_box = tf.reduce_sum(y_true[..., 4])
@@ -194,7 +193,6 @@ class YOLO2(object):
             current_recall = nb_pred_box / (nb_true_box + 1e-6)
             total_recall = tf.assign_add(total_recall, current_recall)
 
-            loss = tf.Print(loss, [tf.zeros((1))], message='Dummy Line \t', summarize=1000)
             loss = tf.Print(loss, [loss_xy], message='Loss XY \t', summarize=1000)
             loss = tf.Print(loss, [loss_wh], message='Loss WH \t', summarize=1000)
             loss = tf.Print(loss, [loss_conf], message='Loss Conf \t', summarize=1000)
@@ -215,10 +213,10 @@ class YOLO2(object):
         input_image = image[:, :, ::-1]
 
         input_image = np.expand_dims(input_image, 0)
-        dummy_array = dummy_array = np.zeros((1, 1, 1, 1, self.max_box_per_image, 4))
+        dummy_array = np.zeros((1, 1, 1, 1, self.max_box_per_image, 4))
 
         netout = self.model.predict([input_image, dummy_array])[0]
-        boxes = decode_netout(self.nb_class, netout, self.anchors)
+        boxes = decode_netout(netout, self.anchors, self.nb_class)
 
         return boxes
 
@@ -227,13 +225,13 @@ class YOLO2(object):
               config,
               result_weights_name,
               augmentation,
-              train_times=2,  # numero di ripetizioni del training set (per piccoli dataset)
-              valid_times=2,  # numero di ripetizioni del validation set (per piccoli dataset)
+              train_times=1,  # numero di ripetizioni del training set (per piccoli dataset)
+              valid_times=1,  # numero di ripetizioni del validation set (per piccoli dataset)
               nb_epoch=100,  # numero di epoche
               learning_rate=1e-3,  # learning rate di training
               batch_size=32,  # grandezza del batch
               warmup_epochs=3,  # numero di epoche iniziali di "warm-up" che consente al modello di prendere famigliarità con il dataset
-              object_scale=0.5,
+              object_scale=5.0,
               no_object_scale=1.0,
               coord_scale=1.0,
               class_scale=1.0,
@@ -282,7 +280,7 @@ class YOLO2(object):
 
         if warmup_epochs > 0:
             print("WARMUP...")
-            self.warmup_bs = warmup_epochs * (train_times * (len(train_imgs) / batch_size + 1) + valid_times * (len(valid_imgs) / batch_size + 1))
+            self.warmup_batches = warmup_epochs * (train_times * len(train_batch) + valid_times * len(valid_batch))
             # eseguo il processo di training di warmpup
             self.model.fit_generator(generator=train_batch,
                                      steps_per_epoch=len(train_batch) * train_times,
@@ -290,10 +288,11 @@ class YOLO2(object):
                                      verbose=1,
                                      validation_data=valid_batch,
                                      validation_steps=len(valid_batch) * valid_times,
-                                     callbacks=[])
+                                     callbacks=[],
+                                     workers=3)
 
         print("Training...")
-        self.warmup_bs = 0
+        self.warmup_batches = 0
         # eseguo il processo di training normale
         self.model.fit_generator(generator=train_batch,
                                  steps_per_epoch=len(train_batch) * train_times,
@@ -301,7 +300,8 @@ class YOLO2(object):
                                  verbose=1,
                                  validation_data=valid_batch,
                                  validation_steps=len(valid_batch) * valid_times,
-                                 callbacks=callbacks)
+                                 callbacks=callbacks,
+                                 workers=3)
 
         # salvo i pesi risultanti
         self.model.save_weights(result_weights_name)

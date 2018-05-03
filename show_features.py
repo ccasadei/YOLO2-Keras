@@ -2,6 +2,7 @@ import matplotlib as mpl
 from keras import backend as K
 from keras.engine.topology import Container
 from keras.layers import Conv2D
+import numpy as np
 
 mpl.use('Agg')
 
@@ -138,6 +139,8 @@ for imgf in os.listdir(config.test_images_path):
         orig_image = cv2.resize(cv2.imread(imgfp), (model.input_size, model.input_size))
         cv2.imshow('Immagine', orig_image)
 
+        skip_img = False
+
         # mi scorro tutti i layer e lavoro su quelli convoluzionali
         for layer in layer_dict:
             if isinstance(layer_dict[layer], Conv2D):
@@ -155,19 +158,28 @@ for imgf in os.listdir(config.test_images_path):
                 while filter_idx < layer_dict[layer].output.shape[3]:
 
                     filter_img = intermediate_output[0, :, :, filter_idx]
-                    cv2.imshow('Filtro', filter_img)
+                    n_filter_img = np.array(filter_img * 255, dtype=np.uint8)
+                    cm_filter_img = cv2.applyColorMap(n_filter_img, cv2.COLORMAP_JET)
+                    cv2.imshow('Filtro', cm_filter_img)
 
                     # attendo la pressione di un tasto
                     # 'q' esce completamenet
+                    # 'm' si sposta sulla prossima immagine
                     # 'n' si sposta sul prossimo layer
                     # '+' avanza di un filtro
-                    # '-' indietreggia di un filtro--
+                    # '-' indietreggia di un filtro
                     k = cv2.waitKey()
                     if k == ord('q'):
                         exit(0)
                     if k == ord('n'):
                         break
+                    if k == ord('m'):
+                        skip_img = True
+                        break
                     if k == ord('+'):
                         filter_idx += 1
                     if k == ord('-'):
                         filter_idx = max(0, filter_idx - 1)
+
+            if skip_img:
+                break
